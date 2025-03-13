@@ -9,17 +9,17 @@ using UserService.Models;
 
 namespace UserService.Services;
 
-public class UserService(AppDbContext dbContext, IConfiguration configuration) : IUserService
+public class UserService(AppDbContext dbContext) : IUserService
 {
     private readonly AppDbContext _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
 
-    private readonly string _jwtSecret = configuration["Jwt:Secret"] ??
-                                         throw new ArgumentNullException("Jwt:Secret is missing in configuration");
+    private readonly string _jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
+                                         ?? throw new ArgumentNullException(
+                                             "JWT_SECRET environment variable is missing");
 
     public async Task<User> CreateUserAsync(UserCreate userCreate)
     {
-        if (userCreate == null)
-            throw new ArgumentNullException(nameof(userCreate));
+        ArgumentNullException.ThrowIfNull(userCreate);
 
         if (await _dbContext.Users.AnyAsync(u => u.Email == userCreate.Email))
             throw new InvalidOperationException("Email already exists");
@@ -37,22 +37,21 @@ public class UserService(AppDbContext dbContext, IConfiguration configuration) :
 
     public async Task<string> GenerateJwtTokenAsync(UserLogin userLogin)
     {
-        if (userLogin == null)
-            throw new ArgumentNullException(nameof(userLogin));
+        ArgumentNullException.ThrowIfNull(userLogin);
 
         var user = await _dbContext.Users.SingleOrDefaultAsync(u => u.Email == userLogin.Email);
         if (user == null)
             throw new InvalidOperationException("User not found");
 
-        // Generate JWT token
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_jwtSecret);
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity([
+            Subject = new ClaimsIdentity(new[]
+            {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email)
-            ]),
+            }),
             Expires = DateTime.UtcNow.AddHours(1),
             SigningCredentials =
                 new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
