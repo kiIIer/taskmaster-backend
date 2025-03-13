@@ -20,7 +20,6 @@ public class UserService(AppDbContext dbContext) : IUserService
         var user = new User
         {
             Email = userCreate.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(userCreate.Password),
             CreatedAt = DateTime.UtcNow
         };
 
@@ -35,8 +34,6 @@ public class UserService(AppDbContext dbContext) : IUserService
             throw new ArgumentNullException(nameof(userLogin));
 
         var user = await _dbContext.Users.SingleOrDefaultAsync(u => u.Email == userLogin.Email);
-        if (user == null || !BCrypt.Net.BCrypt.Verify(userLogin.Password, user.PasswordHash))
-            return null;
 
         return user;
     }
