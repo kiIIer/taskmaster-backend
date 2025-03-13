@@ -23,7 +23,7 @@ public class UsersController(IUserService userService) : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message); // e.g., "Email already exists"
+            return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {
@@ -39,10 +39,12 @@ public class UsersController(IUserService userService) : ControllerBase
 
         try
         {
-            var user = await _userService.AuthenticateUserAsync(userLogin);
-
-            // For now, return a simple response; JWT will be added in Task 1.8
-            return Ok(new { Message = "Login successful", UserId = user.Id });
+            var token = await _userService.GenerateJwtTokenAsync(userLogin);
+            return Ok(new { Token = token });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(ex.Message);
         }
         catch (Exception ex)
         {
@@ -56,6 +58,8 @@ public class UsersController(IUserService userService) : ControllerBase
         try
         {
             var user = await _userService.GetUserByIdAsync(id);
+            if (user == null)
+                return NotFound($"User with ID {id} not found");
 
             return Ok(user);
         }
