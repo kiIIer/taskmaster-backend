@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using UserService.Data;
+using UserService.Interfaces;
+using UserService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +13,9 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(Environment.GetEnvironmentVariable("DATABASE_URL") ?? 
                       builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Add UserService dependency injection
+builder.Services.AddScoped<IUserService, UserService.Services.UserService>();
 
 var app = builder.Build();
 
